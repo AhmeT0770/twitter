@@ -6,6 +6,7 @@ import { TweetCard } from './components/TweetCard';
 import { Leaderboard } from './components/Leaderboard';
 import { Button } from './components/Button';
 
+const ADMIN_PASSWORD = 'yilin-editi-2025';
 const BASE_CATEGORIES: Category[] = ['futbol', 'basketbol', 'voleybol', 'duygusal', 'mizah', 'film', 'dizi'];
 const normalizeCategory = (cat: string) => cat.trim().toLowerCase();
 const dedupeCategories = (cats: Category[]) => Array.from(new Set(cats.map(normalizeCategory)));
@@ -59,6 +60,7 @@ function App() {
   const [selectedCategory, setSelectedCategory] = useState<'all' | Category>('all');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAdminView, setIsAdminView] = useState(false);
+  const [isAdminAuthorized, setIsAdminAuthorized] = useState(false);
   const [categories, setCategories] = useState<Category[]>(() => {
     const saved = localStorage.getItem('twitter_edits_categories_v1');
     if (saved) {
@@ -74,6 +76,17 @@ function App() {
     return dedupeCategories(BASE_CATEGORIES);
   });
   const [newCategoryInput, setNewCategoryInput] = useState('');
+
+  useEffect(() => {
+    // gizli kısayol: Ctrl+Shift+A ile şifre iste
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') {
+        handleSecretAccess();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   // Persist global data
   useEffect(() => {
@@ -221,6 +234,31 @@ function App() {
   const formatDate = (ts: number) => new Date(ts).toLocaleString('tr-TR');
   const formatCategory = (cat: Category) => cat.charAt(0).toUpperCase() + cat.slice(1);
 
+  const handleSecretAccess = () => {
+    const input = window.prompt('Kontrol paneli şifresi?');
+    if (!input) return;
+    if (input === ADMIN_PASSWORD) {
+      setIsAdminAuthorized(true);
+      setIsAdminView(true);
+    } else {
+      alert('Yanlış şifre.');
+    }
+  };
+
+  const handleAdminToggle = () => {
+    if (!isAdminAuthorized) {
+      handleSecretAccess();
+      return;
+    }
+    setIsAdminView(prev => !prev);
+  };
+
+  useEffect(() => {
+    if (!isAdminAuthorized && isAdminView) {
+      setIsAdminView(false);
+    }
+  }, [isAdminAuthorized, isAdminView]);
+
   const handleDelete = (id: string) => {
     const target = edits.find(e => e.id === id);
     if (!target) return;
@@ -264,7 +302,11 @@ function App() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-900 border-b border-slate-800 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-3">
+            <div
+              className="flex items-center space-x-3"
+              onDoubleClick={handleSecretAccess}
+              title=" "
+            >
               <div className="bg-gradient-to-tr from-blue-500 to-purple-500 p-2 rounded-xl shadow-lg shadow-blue-500/20">
                 <Trophy className="w-6 h-6 text-white" />
               </div>
@@ -277,13 +319,15 @@ function App() {
             <div className="hidden md:flex items-center space-x-6">
               <a href="#" className="text-slate-300 hover:text-white transition-colors font-medium hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">Kurallar</a>
               <a href="#" className="text-slate-300 hover:text-white transition-colors font-medium hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">Hakkında</a>
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                onClick={() => setIsAdminView(prev => !prev)}
-              >
-                {isAdminView ? 'Ana Sayfa' : 'Kontrol'}
-              </Button>
+              {isAdminAuthorized && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleAdminToggle}
+                >
+                  {isAdminView ? 'Ana Sayfa' : 'Kontrol'}
+                </Button>
+              )}
               <Button variant="secondary" size="sm" icon={<MessageSquare className="w-4 h-4" />}>
                 Geri Bildirim
               </Button>
@@ -306,14 +350,22 @@ function App() {
           <div className="md:hidden bg-slate-900 border-b border-slate-800 p-4 space-y-4">
             <a href="#" className="block text-slate-300 hover:text-white">Kurallar</a>
             <a href="#" className="block text-slate-300 hover:text-white">Hakkında</a>
-            <button 
-              onClick={() => {
-                setIsAdminView(prev => !prev);
-                setIsMobileMenuOpen(false);
-              }}
+            {isAdminAuthorized && (
+              <button
+                onClick={() => {
+                  handleAdminToggle();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full text-left text-slate-300 hover:text-white"
+              >
+                {isAdminView ? 'Ana Sayfa' : 'Kontrol'}
+              </button>
+            )}
+            <button
               className="w-full text-left text-slate-300 hover:text-white"
+              onClick={() => setIsMobileMenuOpen(false)}
             >
-              {isAdminView ? 'Ana Sayfa' : 'Kontrol'}
+              Geri Bildirim
             </button>
           </div>
         )}
@@ -321,7 +373,7 @@ function App() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12">
-        {isAdminView ? (
+        {isAdminAuthorized && isAdminView ? (
           <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-8 shadow-xl">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
               <div>

@@ -659,9 +659,7 @@ function App() {
               </ul>
             </div>
 
-            <footer className="text-center text-slate-500 text-xs py-4">
-              <p>&copy;2025 Yılın Editi. Twitter (X) ile resmi bir bağlantısı yoktur.</p>
-            </footer>
+            {/* Footer intentionally left blank */}
           </div>
         </div>
         )}

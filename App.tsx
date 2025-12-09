@@ -403,8 +403,6 @@ function App() {
             
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center space-x-6">
-              <a href="#" className="text-slate-300 hover:text-white transition-colors font-medium hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">Kurallar</a>
-              <a href="#" className="text-slate-300 hover:text-white transition-colors font-medium hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">Hakkında</a>
               {isAdminAuthorized && (
                 <Button
                   variant="secondary"
@@ -414,9 +412,6 @@ function App() {
                   {isAdminView ? 'Ana Sayfa' : 'Kontrol'}
                 </Button>
               )}
-              <Button variant="secondary" size="sm" icon={<MessageSquare className="w-4 h-4" />}>
-                Geri Bildirim
-              </Button>
             </div>
 
             {/* Mobile Menu Button */}
@@ -434,8 +429,6 @@ function App() {
         {/* Mobile Dropdown */}
         {isMobileMenuOpen && (
           <div className="md:hidden bg-slate-900 border-b border-slate-800 p-4 space-y-4">
-            <a href="#" className="block text-slate-300 hover:text-white">Kurallar</a>
-            <a href="#" className="block text-slate-300 hover:text-white">Hakkında</a>
             {isAdminAuthorized && (
               <button
                 onClick={() => {

@@ -16,8 +16,8 @@ const dedupeCategories = (cats: Category[]) => Array.from(new Set(cats.map(norma
 type UserVoteMap = Record<string, 'up' | 'down'>;
 type SupabaseSubmission = {
   id: string;
-  tweetUrl: string;
-  tweetId: string;
+  tweet_url: string;
+  tweet_id: string;
   caption: string;
   category: Category;
   votes?: number;
@@ -134,8 +134,8 @@ function App() {
 
       const normalized: EditSubmission[] = (submissions as SupabaseSubmission[] | null | undefined)?.map(sub => ({
         id: sub.id,
-        tweetUrl: sub.tweetUrl,
-        tweetId: sub.tweetId,
+        tweetUrl: sub.tweet_url,
+        tweetId: sub.tweet_id,
         caption: sub.caption,
         category: sub.category ?? 'mizah',
         votes: voteTotals[sub.id] ?? 0,
@@ -184,7 +184,7 @@ function App() {
     const { data: existing, error: existingError } = await supabase
       .from('submissions')
       .select('id')
-      .eq('tweetId', tweetId)
+      .eq('tweet_id', tweetId)
       .limit(1);
 
     if (existingError) {
@@ -209,7 +209,18 @@ function App() {
       author: normalizedAuthor
     };
 
-    const { error } = await supabase.from('submissions').insert(newEdit as any);
+    const insertPayload = {
+      id: newEdit.id,
+      tweet_url: newEdit.tweetUrl,
+      tweet_id: newEdit.tweetId,
+      caption: newEdit.caption,
+      category: newEdit.category,
+      votes: newEdit.votes,
+      timestamp: newEdit.timestamp,
+      author: newEdit.author
+    };
+
+    const { error } = await supabase.from('submissions').insert(insertPayload as any);
     if (error) {
       console.error(error);
       alert('Sunucu kaydı sırasında hata oluştu.');

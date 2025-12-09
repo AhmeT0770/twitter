@@ -14,8 +14,8 @@ Bu proje Twitter (X) embed’lerini ekleyip oylayabileceğin bir liste sunar. Ar
 ```sql
 create table if not exists submissions (
   id text primary key,
-  tweetUrl text not null,
-  tweetId text not null unique,
+  tweet_url text not null,
+  tweet_id text not null unique,
   caption text not null,
   category text not null,
   votes int default 0,

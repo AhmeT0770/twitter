@@ -440,12 +440,6 @@ function App() {
                 {isAdminView ? 'Ana Sayfa' : 'Kontrol'}
               </button>
             )}
-            <button
-              className="w-full text-left text-slate-300 hover:text-white"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Geri Bildirim
-            </button>
           </div>
         )}
       </nav>

@@ -1,66 +1,49 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Trophy, Hash, MessageSquare, Menu, X, Sparkles, Trash2 } from 'lucide-react';
 import { EditSubmission, SortOption, Category } from './types';
 import { SubmissionForm } from './components/SubmissionForm';
 import { TweetCard } from './components/TweetCard';
 import { Leaderboard } from './components/Leaderboard';
 import { Button } from './components/Button';
+import { supabase } from './supabaseClient';
 
 const ADMIN_PASSWORD = 'yilin-editi-2025';
 const BASE_CATEGORIES: Category[] = ['futbol', 'basketbol', 'voleybol', 'duygusal', 'mizah', 'film', 'dizi'];
 const normalizeCategory = (cat: string) => cat.trim().toLowerCase();
 const dedupeCategories = (cats: Category[]) => Array.from(new Set(cats.map(normalizeCategory)));
 
-// Mock initial data so the app isn't empty on first load
-const INITIAL_DATA: EditSubmission[] = [
-  {
-    id: '1',
-    tweetUrl: 'https://twitter.com/elonmusk/status/1608273870901096454',
-    tweetId: '1608273870901096454',
-    caption: 'Matrix hatası gibi olay',
-    category: 'mizah',
-    votes: 142,
-    timestamp: Date.now() - 10000000,
-    author: 'MatrixFan'
-  },
-  {
-    id: '2',
-    tweetUrl: 'https://twitter.com/memes/status/1293593516040269825',
-    tweetId: '1293593516040269825',
-    caption: 'Bu kedi aynı ben ya',
-    category: 'mizah',
-    votes: 89,
-    timestamp: Date.now() - 5000000,
-    author: 'KediSever'
-  }
-];
-
 // Type for tracking local user votes
 type UserVoteMap = Record<string, 'up' | 'down'>;
+type SupabaseSubmission = {
+  id: string;
+  tweetUrl: string;
+  tweetId: string;
+  caption: string;
+  category: Category;
+  votes?: number;
+  timestamp?: number;
+  author?: string;
+};
+type SupabaseVoteRow = {
+  submission_id: string;
+  user_token: string;
+  vote: 'up' | 'down';
+};
 
 function App() {
-  // Global edits state (simulating database)
-  const [edits, setEdits] = useState<EditSubmission[]>(() => {
-    const saved = localStorage.getItem('twitter_edits_v1');
-    const parsed: EditSubmission[] | null = saved ? JSON.parse(saved) : null;
-    const withCategory = (parsed ?? INITIAL_DATA).map(edit => ({
-      ...edit,
-      category: (edit as any).category ?? 'mizah'
-    })) as EditSubmission[];
-    return withCategory;
-  });
+  // Global edits state
+  const [edits, setEdits] = useState<EditSubmission[]>([]);
 
-  // Local user votes state (simulating user session)
-  const [myVotes, setMyVotes] = useState<UserVoteMap>(() => {
-    const saved = localStorage.getItem('twitter_edits_my_votes_v1');
-    return saved ? JSON.parse(saved) : {};
-  });
+  // Kullanıcı oyları (current user)
+  const [myVotes, setMyVotes] = useState<UserVoteMap>({});
 
   const [sortOption, setSortOption] = useState<SortOption>('trending');
   const [selectedCategory, setSelectedCategory] = useState<'all' | Category>('all');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAdminView, setIsAdminView] = useState(false);
   const [isAdminAuthorized, setIsAdminAuthorized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userToken, setUserToken] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>(() => {
     const saved = localStorage.getItem('twitter_edits_categories_v1');
     if (saved) {
@@ -88,17 +71,21 @@ function App() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  // Persist global data
+  // Kullanıcıya kalıcı bir token ver (oy benzersizliği için)
   useEffect(() => {
-    localStorage.setItem('twitter_edits_v1', JSON.stringify(edits));
-  }, [edits]);
+    const existing = localStorage.getItem('twitter_user_token');
+    if (existing) {
+      setUserToken(existing);
+      return;
+    }
+    const generated = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2);
+    localStorage.setItem('twitter_user_token', generated);
+    setUserToken(generated);
+  }, []);
 
-  // Persist user votes
-  useEffect(() => {
-    localStorage.setItem('twitter_edits_my_votes_v1', JSON.stringify(myVotes));
-  }, [myVotes]);
-
-  // Persist categories
+  // Kategorileri yerelde sakla (admin eklemeleri için)
   useEffect(() => {
     localStorage.setItem('twitter_edits_categories_v1', JSON.stringify(categories));
   }, [categories]);
@@ -114,7 +101,70 @@ function App() {
     return match ? match[1] : null;
   };
 
-  const handleSubmission = (url: string, caption: string, author: string, category: Category) => {
+  const fetchSupabaseData = useCallback(async () => {
+    if (!userToken) return;
+    try {
+      setIsLoading(true);
+      const [{ data: submissions, error: submissionsError }, { data: votesRows, error: votesError }] = await Promise.all([
+        supabase
+          .from('submissions')
+          .select('*')
+          .order('timestamp', { ascending: false }) as any,
+        supabase
+          .from('votes')
+          .select('submission_id,user_token,vote') as any
+      ]);
+
+      if (submissionsError || votesError) {
+        console.error(submissionsError || votesError);
+        setIsLoading(false);
+        return;
+      }
+
+      const voteTotals: Record<string, number> = {};
+      const myVoteMap: UserVoteMap = {};
+
+      (votesRows as SupabaseVoteRow[] | null | undefined)?.forEach(v => {
+        const delta = v.vote === 'up' ? 1 : -1;
+        voteTotals[v.submission_id] = (voteTotals[v.submission_id] ?? 0) + delta;
+        if (v.user_token === userToken) {
+          myVoteMap[v.submission_id] = v.vote;
+        }
+      });
+
+      const normalized: EditSubmission[] = (submissions as SupabaseSubmission[] | null | undefined)?.map(sub => ({
+        id: sub.id,
+        tweetUrl: sub.tweetUrl,
+        tweetId: sub.tweetId,
+        caption: sub.caption,
+        category: sub.category ?? 'mizah',
+        votes: voteTotals[sub.id] ?? 0,
+        timestamp: Number(sub.timestamp ?? Date.now()),
+        author: sub.author ?? 'Anonim Editor'
+      })) ?? [];
+
+      setEdits(normalized);
+      setMyVotes(myVoteMap);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userToken]);
+
+  useEffect(() => {
+    if (!userToken) return;
+    fetchSupabaseData();
+    const interval = setInterval(fetchSupabaseData, 20000);
+    return () => clearInterval(interval);
+  }, [userToken, fetchSupabaseData]);
+
+  const handleSubmission = async (url: string, caption: string, author: string, category: Category) => {
+    if (!userToken) {
+      alert('Tekrar dene: kullanıcı oturumu hazırlanamadı.');
+      return;
+    }
+
     const normalizedUrl = url.trim();
     const normalizedCaption = caption.trim();
     const normalizedAuthor = author.trim().replace(/^@+/, '') || 'Anonim Editor';
@@ -130,14 +180,26 @@ function App() {
       return;
     }
 
-    // Check for duplicates
-    if (edits.some(e => e.tweetId === tweetId)) {
+    // Sunucuda duplicate kontrolü
+    const { data: existing, error: existingError } = await supabase
+      .from('submissions')
+      .select('id')
+      .eq('tweetId', tweetId)
+      .limit(1);
+
+    if (existingError) {
+      console.error(existingError);
+      alert('Sunucu hatası oluştu.');
+      return;
+    }
+
+    if (existing && existing.length > 0) {
       alert('Bu tweet zaten eklenmiş!');
       return;
     }
 
     const newEdit: EditSubmission = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Math.random().toString(36).substr(2, 9),
       tweetUrl: normalizedUrl,
       tweetId,
       caption: normalizedCaption,
@@ -147,7 +209,16 @@ function App() {
       author: normalizedAuthor
     };
 
+    const { error } = await supabase.from('submissions').insert(newEdit as any);
+    if (error) {
+      console.error(error);
+      alert('Sunucu kaydı sırasında hata oluştu.');
+      return;
+    }
+
+    // Optimistic update ardından sunucudan tazele
     setEdits(prev => [newEdit, ...prev]);
+    await fetchSupabaseData();
   };
 
   const scrollToEdit = (id: string) => {
@@ -176,42 +247,46 @@ function App() {
     requestAnimationFrame(() => scrollToEdit(edit.id));
   };
 
-  const handleVote = (id: string, type: 'up' | 'down') => {
-    const currentVote = myVotes[id]; // 'up', 'down', or undefined
-    let scoreChange = 0;
-    let newVoteState: 'up' | 'down' | undefined = type;
-
-    if (currentVote === type) {
-      // Same button toggles off
-      scoreChange = type === 'up' ? -1 : 1;
-      newVoteState = undefined;
-    } else if (currentVote) {
-      // Switching sides now clears the previous vote only (no double step)
-      scoreChange = currentVote === 'up' ? -1 : 1;
-      newVoteState = undefined;
-    } else {
-      // Fresh vote
-      scoreChange = type === 'up' ? 1 : -1;
+  const handleVote = async (id: string, type: 'up' | 'down') => {
+    if (!userToken) {
+      alert('Tekrar dene: kullanıcı oturumu hazırlanamadı.');
+      return;
     }
 
-    // Update global score
-    setEdits(prev => prev.map(edit => {
-      if (edit.id === id) {
-        return { ...edit, votes: edit.votes + scoreChange };
-      }
-      return edit;
-    }));
+    const { data: existingRows, error: existingError } = await supabase
+      .from('votes')
+      .select('vote')
+      .eq('submission_id', id)
+      .eq('user_token', userToken)
+      .limit(1);
 
-    // Update local user voting history
-    setMyVotes(prev => {
-      const updated = { ...prev };
-      if (newVoteState) {
-        updated[id] = newVoteState;
-      } else {
-        delete updated[id];
-      }
-      return updated;
-    });
+    if (existingError) {
+      console.error(existingError);
+      alert('Oy verirken hata oluştu.');
+      return;
+    }
+
+    const existingVote = existingRows?.[0]?.vote as 'up' | 'down' | undefined;
+
+    if (existingVote === type) {
+      await supabase
+        .from('votes')
+        .delete()
+        .eq('submission_id', id)
+        .eq('user_token', userToken);
+    } else if (existingVote) {
+      await supabase
+        .from('votes')
+        .update({ vote: type })
+        .eq('submission_id', id)
+        .eq('user_token', userToken);
+    } else {
+      await supabase
+        .from('votes')
+        .insert({ submission_id: id, user_token: userToken, vote: type } as any);
+    }
+
+    await fetchSupabaseData();
   };
 
   const filteredEdits = useMemo(() => {
@@ -533,11 +608,15 @@ function App() {
 
             {/* Tweet Grid */}
             <div className="grid grid-cols-1 gap-8">
-              {sortedEdits.length === 0 ? (
-                <div className="text-center py-24 bg-slate-900/70 rounded-3xl border border-slate-800 border-dashed">
-                  <p className="text-slate-400 text-lg">Henüz hiç edit eklenmemiş. <br/>İlk sen ol, sahne senin!</p>
+              {isLoading ? (
+                <div className="text-center py-16 bg-slate-900/70 rounded-3xl border border-slate-800 border-dashed text-slate-300">
+                  Yükleniyor...
                 </div>
-              ) : (
+              ) : sortedEdits.length === 0 ? (
+                  <div className="text-center py-24 bg-slate-900/70 rounded-3xl border border-slate-800 border-dashed">
+                    <p className="text-slate-400 text-lg">Henüz hiç edit eklenmemiş. <br/>İlk sen ol, sahne senin!</p>
+                  </div>
+                ) : (
                 sortedEdits.map((edit, index) => (
                   <TweetCard
                     key={edit.id}

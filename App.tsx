@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Trophy, Hash, MessageSquare, Menu, X, Sparkles, Trash2 } from 'lucide-react';
+import { Trophy, Hash, MessageSquare, Sparkles, Trash2 } from 'lucide-react';
 import { EditSubmission, SortOption, Category } from './types';
 import { SubmissionForm } from './components/SubmissionForm';
 import { TweetCard } from './components/TweetCard';
@@ -39,7 +39,6 @@ function App() {
 
   const [sortOption, setSortOption] = useState<SortOption>('trending');
   const [selectedCategory, setSelectedCategory] = useState<'all' | Category>('all');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAdminView, setIsAdminView] = useState(false);
   const [isAdminAuthorized, setIsAdminAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -426,60 +425,19 @@ function App() {
                 </Button>
               )}
             </div>
-
-            {/* Mobile Menu Button */}
             <div className="md:hidden">
-              <button 
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="text-slate-300 hover:text-white"
-              >
-                {isMobileMenuOpen ? <X /> : <Menu />}
-              </button>
+              {isAdminAuthorized && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleAdminToggle}
+                >
+                  {isAdminView ? 'Ana Sayfa' : 'Kontrol'}
+                </Button>
+              )}
             </div>
           </div>
         </div>
-
-        {/* Mobile Dropdown */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden bg-slate-900 border-b border-slate-800 p-4 space-y-4">
-            {isAdminAuthorized && (
-              <button
-                onClick={() => {
-                  handleAdminToggle();
-                  setIsMobileMenuOpen(false);
-                }}
-                className="w-full text-left text-slate-300 hover:text-white"
-              >
-                {isAdminView ? 'Ana Sayfa' : 'Kontrol'}
-              </button>
-            )}
-            <div className="space-y-3">
-              <p className="text-slate-300 text-sm font-semibold">Keşfet</p>
-              <div className="flex flex-wrap gap-2">
-                {[{ key: 'all', label: 'Hepsi' }, ...categories.map(cat => ({ key: cat, label: formatCategory(cat) }))].map(opt => (
-                  <Button
-                    key={opt.key}
-                    variant={selectedCategory === opt.key ? 'primary' : 'ghost'}
-                    onClick={() => {
-                      setSelectedCategory(opt.key as 'all' | Category);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    size="sm"
-                    className={selectedCategory === opt.key ? '' : 'bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10'}
-                  >
-                    {opt.label}
-                  </Button>
-                ))}
-              </div>
-              <div className="pt-2">
-                <Leaderboard edits={edits} onSelect={(edit) => {
-                  handleSelectFromLeaderboard(edit);
-                  setIsMobileMenuOpen(false);
-                }} />
-              </div>
-            </div>
-          </div>
-        )}
       </nav>
 
       {/* Main Content */}

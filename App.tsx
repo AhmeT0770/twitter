@@ -357,11 +357,18 @@ function App() {
     }
   }, [isAdminAuthorized, isAdminView]);
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     const target = edits.find(e => e.id === id);
     if (!target) return;
     const confirmed = window.confirm(`“${target.caption}” kaydını silmek istediğine emin misin?`);
     if (!confirmed) return;
+
+    const { error } = await supabase.from('submissions').delete().eq('id', id);
+    if (error) {
+      console.error(error);
+      alert('Silme sırasında hata oluştu.');
+      return;
+    }
 
     setEdits(prev => prev.filter(edit => edit.id !== id));
     setMyVotes(prev => {
@@ -369,10 +376,18 @@ function App() {
       delete updated[id];
       return updated;
     });
+    await fetchSupabaseData();
   };
 
-  const handleAdminCategoryChange = (id: string, category: Category) => {
+  const handleAdminCategoryChange = async (id: string, category: Category) => {
+    const { error } = await supabase.from('submissions').update({ category }).eq('id', id);
+    if (error) {
+      console.error(error);
+      alert('Kategori güncellenemedi.');
+      return;
+    }
     setEdits(prev => prev.map(edit => edit.id === id ? { ...edit, category } : edit));
+    await fetchSupabaseData();
   };
 
   const handleAddCategory = () => {
@@ -391,6 +406,8 @@ function App() {
     if (normalizeCategory(selectedCategory) === normalizeCategory(cat)) {
       setSelectedCategory('all');
     }
+
+    // Supabase tarafında kategori alanı yok; sadece ön yüzde saklanıyor.
   };
 
   return (

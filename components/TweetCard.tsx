@@ -63,16 +63,27 @@ const TwitterEmbed: React.FC<{ tweetId: string }> = ({ tweetId }) => {
       try {
         await loadTwitterScript();
         const twttr = (window as any).twttr;
-        if (isCancelled || !twttr?.widgets || !containerRef.current) return;
+        const container = containerRef.current;
+        if (isCancelled || !twttr?.widgets || !container) return;
 
         // Clear any existing embeds in this container to avoid doubles
-        containerRef.current.innerHTML = '';
+        container.innerHTML = '';
 
-        const run = () => twttr.widgets.createTweet(tweetId, containerRef.current!, {
+        // Clamp width to Twitter widget limits so it stays responsive
+        const containerWidth = container.clientWidth || 550;
+        const width = Math.min(Math.max(containerWidth, 320), 550);
+
+        // Keep space reserved while the embed renders
+        container.style.minHeight = '360px';
+
+        const run = () => twttr.widgets.createTweet(tweetId, container, {
           theme: 'dark',
           align: 'center',
           conversation: 'none',
           dnt: true,
+          width,
+        }).then(() => {
+          container.style.minHeight = '0px';
         });
 
         if ('requestIdleCallback' in window) {
@@ -96,7 +107,13 @@ const TwitterEmbed: React.FC<{ tweetId: string }> = ({ tweetId }) => {
     };
   }, [tweetId, isVisible]);
 
-  return <div ref={containerRef} className="w-full flex justify-center tweet-container" />;
+  return (
+    <div
+      ref={containerRef}
+      className="w-full flex justify-center tweet-container"
+      style={{ minHeight: '360px' }}
+    />
+  );
 };
 
 export const TweetCard: React.FC<TweetCardProps> = ({ edit, rank, onVote, userVote }) => {
@@ -178,12 +195,9 @@ export const TweetCard: React.FC<TweetCardProps> = ({ edit, rank, onVote, userVo
 
         {/* Video / Tweet Embed Container - Compact Player */}
         <div className="relative w-full bg-black/80 border-y border-slate-800 shadow-inner">
-            {/* Fixed aspect to keep cards aynı yükseklikte */}
-            <div className="relative w-full max-w-[640px] mx-auto aspect-[16/9]">
-                <div className="absolute inset-0 flex items-center justify-center px-2">
-                    <TwitterEmbed tweetId={edit.tweetId} />
-                </div>
-            </div>
+          <div className="w-full max-w-[720px] mx-auto px-3 py-4">
+            <TwitterEmbed tweetId={edit.tweetId} />
+          </div>
         </div>
 
         {/* Footer Actions - Compact with Upvote/Downvote */}

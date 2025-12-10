@@ -31,6 +31,21 @@ type SupabaseVoteRow = {
 };
 
 function App() {
+  const InfoCard = ({ className = '' }) => (
+    <div className={`bg-slate-900/80 border border-slate-800 rounded-3xl p-8 shadow-xl relative overflow-hidden group ${className}`}>
+      <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+      <h3 className="font-bold text-xl text-white mb-4 flex items-center">
+        Nasıl Çalışır?
+      </h3>
+      <ul className="text-sm text-slate-200 space-y-3 list-disc list-inside">
+        <li>Twitter (X) linkini kopyala</li>
+        <li>Yukarıdaki kutucuğa yapıştır</li>
+        <li>Kısa ve öz bir açıklama yaz</li>
+        <li>Topluluk oylarıyla sıralamaya gir!</li>
+      </ul>
+    </div>
+  );
+
   // Global edits state
   const [edits, setEdits] = useState<EditSubmission[]>([]);
 

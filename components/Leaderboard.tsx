@@ -17,7 +17,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ edits, onSelect, class
   const formatCategory = (cat: string) => cat.charAt(0).toUpperCase() + cat.slice(1);
 
   return (
-    <div className={`bg-slate-900/80 border border-slate-800 rounded-3xl p-6 shadow-xl flex flex-col ${className}`}>
+    <div className={`bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sticky top-28 shadow-xl ${className}`}>
       <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
         <h2 className="text-lg font-bold text-white flex items-center">
           <Trophy className="w-5 h-5 text-yellow-500 mr-2 drop-shadow-md" />

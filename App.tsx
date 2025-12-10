@@ -642,11 +642,11 @@ function App() {
           </div>
 
           {/* Sidebar */}
-          <div className="lg:col-span-4 hidden lg:flex flex-col gap-8 h-full">
-            <Leaderboard edits={edits} onSelect={handleSelectFromLeaderboard} className="flex-1" />
+          <div className="lg:col-span-4 hidden lg:flex flex-col gap-8 lg:mt-6">
+            <Leaderboard edits={edits} onSelect={handleSelectFromLeaderboard} />
 
             {/* Info Box */}
-            <div className="flex-1 bg-slate-900/80 border border-slate-800 rounded-3xl p-8 shadow-xl relative overflow-hidden group">
+            <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-8 shadow-xl relative overflow-hidden group">
               <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
               <h3 className="font-bold text-xl text-white mb-4 flex items-center">
                 Nasıl Çalışır?

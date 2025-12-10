@@ -5,10 +5,9 @@ import { EditSubmission } from '../types';
 interface LeaderboardProps {
   edits: EditSubmission[];
   onSelect?: (edit: EditSubmission) => void;
-  className?: string;
 }
 
-export const Leaderboard: React.FC<LeaderboardProps> = ({ edits, onSelect, className = '' }) => {
+export const Leaderboard: React.FC<LeaderboardProps> = ({ edits, onSelect }) => {
   const topEdits = [...edits].sort((a, b) => b.votes - a.votes).slice(0, 5);
   const formatAuthor = (author: string) => {
     const cleanAuthor = author.trim() || 'Anonim Editor';
@@ -17,7 +16,7 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ edits, onSelect, class
   const formatCategory = (cat: string) => cat.charAt(0).toUpperCase() + cat.slice(1);
 
   return (
-    <div className={`bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sticky top-28 shadow-xl ${className}`}>
+    <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sticky top-28 shadow-xl">
       <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
         <h2 className="text-lg font-bold text-white flex items-center">
           <Trophy className="w-5 h-5 text-yellow-500 mr-2 drop-shadow-md" />

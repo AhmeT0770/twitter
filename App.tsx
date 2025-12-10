@@ -44,6 +44,7 @@ function App() {
   const [isAdminAuthorized, setIsAdminAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userToken, setUserToken] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const [categories, setCategories] = useState<Category[]>(() => {
     const saved = localStorage.getItem('twitter_edits_categories_v1');
     if (saved) {
@@ -69,6 +70,16 @@ function App() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  // Mobil tespiti
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(max-width: 767px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
   }, []);
 
   // Kullanıcıya kalıcı bir token ver (oy benzersizliği için)
@@ -316,6 +327,12 @@ function App() {
     });
   }, [filteredEdits, sortOption]);
 
+  // Mobil için en popüler edit (seçili kategoriye göre)
+  const mobileTopEdit = useMemo(() => {
+    if (filteredEdits.length === 0) return null;
+    return [...filteredEdits].sort((a, b) => b.votes - a.votes)[0] ?? null;
+  }, [filteredEdits]);
+
   const adminList = [...edits].sort((a, b) => b.timestamp - a.timestamp);
   const formatDate = (ts: number) => new Date(ts).toLocaleString('tr-TR');
   const formatCategory = (cat: Category) => cat.charAt(0).toUpperCase() + cat.slice(1);
@@ -440,6 +457,31 @@ function App() {
                 {isAdminView ? 'Ana Sayfa' : 'Kontrol'}
               </button>
             )}
+            <div className="space-y-3">
+              <p className="text-slate-300 text-sm font-semibold">Keşfet</p>
+              <div className="flex flex-wrap gap-2">
+                {[{ key: 'all', label: 'Hepsi' }, ...categories.map(cat => ({ key: cat, label: formatCategory(cat) }))].map(opt => (
+                  <Button
+                    key={opt.key}
+                    variant={selectedCategory === opt.key ? 'primary' : 'ghost'}
+                    onClick={() => {
+                      setSelectedCategory(opt.key as 'all' | Category);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    size="sm"
+                    className={selectedCategory === opt.key ? '' : 'bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10'}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+              <div className="pt-2">
+                <Leaderboard edits={edits} onSelect={(edit) => {
+                  handleSelectFromLeaderboard(edit);
+                  setIsMobileMenuOpen(false);
+                }} />
+              </div>
+            </div>
           </div>
         )}
       </nav>
@@ -569,10 +611,10 @@ function App() {
 
             <SubmissionForm onSubmit={handleSubmission} categories={categories} />
 
-            {/* Filters */}
-            <div className="flex items-center space-x-4 mb-8 overflow-x-auto pb-2 scrollbar-hide px-1">
-              <Button
-                variant={sortOption === 'trending' ? 'primary' : 'ghost'}
+            {/* Filters - desktop */}
+            <div className="hidden md:flex items-center space-x-4 mb-8 overflow-x-auto pb-2 scrollbar-hide px-1">
+              <Button 
+                variant={sortOption === 'trending' ? 'primary' : 'ghost'} 
                 onClick={() => setSortOption('trending')}
                 size="sm"
                 icon={<Sparkles className="w-4 h-4" />}
@@ -580,8 +622,8 @@ function App() {
               >
                 Popüler
               </Button>
-              <Button
-                variant={sortOption === 'newest' ? 'primary' : 'ghost'}
+              <Button 
+                variant={sortOption === 'newest' ? 'primary' : 'ghost'} 
                 onClick={() => setSortOption('newest')}
                 size="sm"
                 icon={<Hash className="w-4 h-4" />}
@@ -590,9 +632,9 @@ function App() {
                 En Yeni
               </Button>
             </div>
-              <div className="flex items-center space-x-3 mb-8 overflow-x-auto pb-2 scrollbar-hide px-1">
+              <div className="hidden md:flex items-center space-x-3 mb-8 overflow-x-auto pb-2 scrollbar-hide px-1">
               {[{ key: 'all', label: 'Hepsi' }, ...categories.map(cat => ({ key: cat, label: formatCategory(cat) }))].map(opt => (
-                <Button
+                <Button 
                   key={opt.key}
                   variant={selectedCategory === opt.key ? 'primary' : 'ghost'}
                   onClick={() => setSelectedCategory(opt.key as 'all' | Category)}
@@ -606,7 +648,25 @@ function App() {
 
             {/* Tweet Grid */}
             <div className="grid grid-cols-1 gap-8">
-              {isLoading ? (
+              {isMobile ? (
+                isLoading ? (
+                  <div className="text-center py-16 bg-slate-900/70 rounded-3xl border border-slate-800 border-dashed text-slate-300">
+                    Yükleniyor...
+                  </div>
+                ) : !mobileTopEdit ? (
+                  <div className="text-center py-24 bg-slate-900/70 rounded-3xl border border-slate-800 border-dashed">
+                    <p className="text-slate-400 text-lg">Henüz hiç edit eklenmemiş. <br/>İlk sen ol, sahne senin!</p>
+                  </div>
+                ) : (
+                  <TweetCard
+                    key={mobileTopEdit.id}
+                    edit={mobileTopEdit}
+                    rank={1}
+                    onVote={handleVote}
+                    userVote={myVotes[mobileTopEdit.id]}
+                  />
+                )
+              ) : isLoading ? (
                 <div className="text-center py-16 bg-slate-900/70 rounded-3xl border border-slate-800 border-dashed text-slate-300">
                   Yükleniyor...
                 </div>
@@ -629,7 +689,7 @@ function App() {
           </div>
 
           {/* Sidebar */}
-          <div className="lg:col-span-4 space-y-8">
+          <div className="lg:col-span-4 space-y-8 hidden lg:block">
             <Leaderboard edits={edits} onSelect={handleSelectFromLeaderboard} />
             
             {/* Info Box */}

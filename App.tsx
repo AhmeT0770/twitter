@@ -590,7 +590,7 @@ function App() {
                 En İyi Editleri Oyla <span className="inline-block animate-bounce">👇</span>
               </h1>
               <p className="text-slate-300 text-lg md:text-xl font-light max-w-2xl leading-relaxed">
-                Twitter aleminin en komik, en yetenekli editlerini seçiyoruz. <br className="hidden md:block"/>
+                Twitter aleminin en komik, en yetenekli editlerini seçiyoruz. Bu senenin en iyisi kimdi? <br className="hidden md:block"/>
                 Linki yapıştır, yarışmaya katıl, efsane ol.
               </p>
             </div>

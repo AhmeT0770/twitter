@@ -178,11 +178,10 @@ export const TweetCard: React.FC<TweetCardProps> = ({ edit, rank, onVote, userVo
 
         {/* Video / Tweet Embed Container - Compact Player */}
         <div className="relative w-full bg-black/80 border-y border-slate-800 shadow-inner">
-            
-            {/* Removed extra height and scaling for compactness */}
-            <div className="w-full flex justify-center py-2 min-h-[220px]">
-                 <div className="w-full max-w-[500px]">
-                     <TwitterEmbed tweetId={edit.tweetId} />
+            {/* Fixed aspect to keep cards aynı yükseklikte */}
+            <div className="relative w-full max-w-[640px] mx-auto aspect-[16/9]">
+                <div className="absolute inset-0 flex items-center justify-center px-2">
+                    <TwitterEmbed tweetId={edit.tweetId} />
                 </div>
             </div>
         </div>

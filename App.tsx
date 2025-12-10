@@ -327,11 +327,7 @@ function App() {
     });
   }, [filteredEdits, sortOption]);
 
-  // Mobil için en popüler edit (seçili kategoriye göre)
-  const mobileTopEdit = useMemo(() => {
-    if (filteredEdits.length === 0) return null;
-    return [...filteredEdits].sort((a, b) => b.votes - a.votes)[0] ?? null;
-  }, [filteredEdits]);
+  // Mobil için tüm listeyi gösteriyoruz; ekstra seçime gerek yok
 
   const adminList = [...edits].sort((a, b) => b.timestamp - a.timestamp);
   const formatDate = (ts: number) => new Date(ts).toLocaleString('tr-TR');
@@ -612,7 +608,7 @@ function App() {
             <SubmissionForm onSubmit={handleSubmission} categories={categories} />
 
             {/* Filters - desktop */}
-            <div className="hidden md:flex items-center space-x-4 mb-8 overflow-x-auto pb-2 scrollbar-hide px-1">
+            <div className="flex items-center space-x-4 mb-8 overflow-x-auto pb-2 scrollbar-hide px-1">
               <Button 
                 variant={sortOption === 'trending' ? 'primary' : 'ghost'} 
                 onClick={() => setSortOption('trending')}
@@ -632,7 +628,7 @@ function App() {
                 En Yeni
               </Button>
             </div>
-              <div className="hidden md:flex items-center space-x-3 mb-8 overflow-x-auto pb-2 scrollbar-hide px-1">
+              <div className="flex items-center space-x-3 mb-8 overflow-x-auto pb-2 scrollbar-hide px-1">
               {[{ key: 'all', label: 'Hepsi' }, ...categories.map(cat => ({ key: cat, label: formatCategory(cat) }))].map(opt => (
                 <Button 
                   key={opt.key}
@@ -648,25 +644,7 @@ function App() {
 
             {/* Tweet Grid */}
             <div className="grid grid-cols-1 gap-8">
-              {isMobile ? (
-                isLoading ? (
-                  <div className="text-center py-16 bg-slate-900/70 rounded-3xl border border-slate-800 border-dashed text-slate-300">
-                    Yükleniyor...
-                  </div>
-                ) : !mobileTopEdit ? (
-                  <div className="text-center py-24 bg-slate-900/70 rounded-3xl border border-slate-800 border-dashed">
-                    <p className="text-slate-400 text-lg">Henüz hiç edit eklenmemiş. <br/>İlk sen ol, sahne senin!</p>
-                  </div>
-                ) : (
-                  <TweetCard
-                    key={mobileTopEdit.id}
-                    edit={mobileTopEdit}
-                    rank={1}
-                    onVote={handleVote}
-                    userVote={myVotes[mobileTopEdit.id]}
-                  />
-                )
-              ) : isLoading ? (
+              {isLoading ? (
                 <div className="text-center py-16 bg-slate-900/70 rounded-3xl border border-slate-800 border-dashed text-slate-300">
                   Yükleniyor...
                 </div>
